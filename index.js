@@ -435,6 +435,7 @@ async function initBillsTab() {
   const loader = document.getElementById('billsLoader');
   const err    = document.getElementById('billsError');
   const view   = document.getElementById('billsView');
+  const congress = document.getElementById('congressSelect').value;
 
   // If senators already loaded from optimizer tab, reuse
   if (senators.length) {
@@ -450,7 +451,7 @@ async function initBillsTab() {
   view.innerHTML = '';
 
   try {
-    const senData = await apiFetch('/people?type=senator&congress=19&limit=100&sort=last_name&dir=asc');
+    const senData = await apiFetch(`/people?type=senator&congress=${congress}&limit=100&sort=last_name&dir=asc`);
     const rawList = Array.isArray(senData) ? senData : (senData.senators || []);
 
     const BATCH = 5;
@@ -459,7 +460,7 @@ async function initBillsTab() {
       const batch = rawList.slice(i, i + BATCH);
       const batchRes = await Promise.allSettled(batch.map(async sen => {
         const searchTerm = encodeURIComponent(sen.last_name || sen.first_name || sen.name || '');
-        const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=19&type=sb&sort=date_filed&dir=desc`);
+        const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=${congress}&type=sb&sort=date_filed&dir=desc`);
         const bills = billsRaw.filter(b => Array.isArray(b.authors) && b.authors.some(a => a.id === sen.id));
         const passed = bills.filter(b => {
           const t = (b.title || '').toUpperCase();
