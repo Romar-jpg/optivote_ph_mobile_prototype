@@ -2,11 +2,13 @@
 
 // API Configuration
 const API_ROOT = 'https://open-congress-api.bettergov.ph/api';
-const USE_CORS_PROXY = window.location.protocol !== 'file:';
+const IS_FILE_PROTOCOL = window.location.protocol === 'file:';
+const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
 function buildApiUrl(path) {
-  const targetUrl = API_ROOT + path;
-  return USE_CORS_PROXY ? `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` : targetUrl;
+  if (IS_FILE_PROTOCOL) return API_ROOT + path;
+  if (IS_LOCALHOST) return `https://corsproxy.io/?${encodeURIComponent(API_ROOT + path)}`;
+  return `/api/proxy?path=${encodeURIComponent(path)}`;
 }
 
 // ── Sector keyword map ──────────────────────────────────────────────
