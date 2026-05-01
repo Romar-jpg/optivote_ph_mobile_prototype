@@ -1,9 +1,13 @@
 'use strict';
 
-// API Configuration - use proxy for HTTP, direct for file://
-const BASE = window.location.protocol === 'file:' 
-  ? 'https://open-congress-api.bettergov.ph/api'
-  : 'http://localhost:3001/api';
+// API Configuration
+const API_ROOT = 'https://open-congress-api.bettergov.ph/api';
+const USE_CORS_PROXY = window.location.protocol !== 'file:';
+
+function buildApiUrl(path) {
+  const targetUrl = API_ROOT + path;
+  return USE_CORS_PROXY ? `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` : targetUrl;
+}
 
 // ── Sector keyword map ──────────────────────────────────────────────
 const SECTOR_RULES = [
@@ -65,7 +69,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ── Fetch helpers ───────────────────────────────────────────────────
 async function apiFetch(path) {
   try {
-    const res = await fetch(BASE + path, {
+    const res = await fetch(buildApiUrl(path), {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -93,7 +97,7 @@ async function fetchAllPaginated(path, paramSep='?') {
   const limit = 100;
   while (true) {
     const sep = path.includes('?') ? '&' : '?';
-    const data = await fetch(BASE + path + sep + `limit=${limit}&offset=${offset}`)
+    const data = await fetch(buildApiUrl(path + sep + `limit=${limit}&offset=${offset}`))
       .then(r => r.json());
     if (!data.success) break;
     const chunk = Array.isArray(data.data) ? data.data : [];
@@ -106,7 +110,7 @@ async function fetchAllPaginated(path, paramSep='?') {
 
 // ── Load Senators ───────────────────────────────────────────────────
 async function testAPI() {
-  const testUrl = BASE + '/people?type=senator&congress=20&limit=5&sort=last_name&dir=asc';
+  const testUrl = buildApiUrl('/people?type=senator&congress=20&limit=5&sort=last_name&dir=asc');
   console.log('Testing API connection to:', testUrl);
   
   try {
