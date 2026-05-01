@@ -494,18 +494,14 @@
     white-space: nowrap;
   }
 
-  .st-edu     { background: #ede9fe; color: #4c1d95; }
-  .st-health  { background: #fee2e2; color: #7f1d1d; }
-  .st-agri    { background: #d1fae5; color: #064e3b; }
-  .st-infra   { background: #dbeafe; color: #1e3a8a; }
-  .st-social  { background: #fef9c3; color: #713f12; }
-  .st-econ    { background: #ccfbf1; color: #134e4a; }
-  .st-justice { background: #fce7f3; color: #831843; }
-  .st-env     { background: #dcfce7; color: #14532d; }
-  .st-gov     { background: #f1f5f9; color: #1e293b; }
-  .st-labor   { background: #fff7ed; color: #7c2d12; }
-  .st-science { background: #e0f2fe; color: #0c4a6e; }
-  .st-defense { background: #fef2f2; color: #7f1d1d; }
+  /* 7 Sectors */
+  .st-sshd { background: #fce7f3; color: #831843; }                       /* Social Services & Human Development - Pink */
+  .st-esc  { background: #ede9fe; color: #4c1d95; }                        /* Education, Science & Culture - Purple */
+  .st-efl  { background: #ccfbf1; color: #134e4a; }                        /* Economy, Finance & Labor - Teal */
+  .st-ips  { background: #dbeafe; color: #1e3a8a; }                        /* Infrastructure & Public Services - Blue */
+  .st-ae   { background: #dcfce7; color: #14532d; }                        /* Agriculture & Environment - Green */
+  .st-jls  { background: #fee2e2; color: #7f1d1d; }                        /* Justice, Law & Security - Deep Red */
+  .st-gia  { background: #f1f5f9; color: #1e293b; }                        /* Governance & Internal Affairs - Slate */
   .st-default { background: var(--surface); color: var(--muted); }
 
   /* ── RESULTS ── */

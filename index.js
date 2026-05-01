@@ -13,24 +13,23 @@ function buildApiUrl(path) {
 
 // ── Sector keyword map ──────────────────────────────────────────────
 const SECTOR_RULES = [
-  { sector: 'Education',      kw: ['education','school','tuition','student','curriculum','teacher','learning','literacy','academ','scholarship'] },
-  { sector: 'Health',         kw: ['health','medical','hospital','medicine','disease','mental health','pandemic','vaccine','pharmaceu','nutrition','sanit'] },
-  { sector: 'Agriculture',    kw: ['agri','farm','fisher','crop','livestock','rice','coconut','rural','food secur','irrigat'] },
-  { sector: 'Infrastructure', kw: ['infrastructure','road','bridge','transport','highway','construct','urban','housing','water supply','sewage','electrif'] },
-  { sector: 'Economy',        kw: ['econom','trade','tax','tariff','invest','fiscal','budget','finance','bank','business','industry','enterprise','market'] },
-  { sector: 'Justice',        kw: ['justice','court','crime','anti-corruption','punish','penal','law enforce','illegal','drug','human right','civil right','legal'] },
-  { sector: 'Environment',    kw: ['environment','climate','ecolog','forest','biodiversit','waste','pollution','water resource','natural resource','green'] },
-  { sector: 'Social',         kw: ['social welfare','senior','child','women','family','poverty','disability','indigenous','OFW','overseas worker','barangay','community'] },
-  { sector: 'Labor',          kw: ['labor','worker','employ','wage','OFW','livelihood','manpower','tesda','skill','occupat'] },
-  { sector: 'Science',        kw: ['science','technolog','innovat','digital','information and communications','ICT','research','AI','cyber','space','DOST'] },
-  { sector: 'Defense',        kw: ['defense','military','armed','security','police','coast guard','AFP','PNP','disaster','emergency','terrorism'] },
-  { sector: 'Governance',     kw: ['government','governance','transparency','accountability','election','suffrage','autonomy','local government','congress','senate','constitution','bureaucra'] },
+  { sector: 'Social Services & Human Development', kw: ['health','medical','hospital','medicine','disease','vaccine','pharmaceu','nutrition','sanitation','demography','social welfare','senior','child','women','family','poverty','disability','gender equality','youth','sports','cultural','muslim affairs','barangay','community'] },
+  { sector: 'Education, Science & Culture', kw: ['education','school','university','tuition','student','curriculum','teacher','learning','literacy','academ','scholarship','science','technolog','innovat','digital','information and communications','ICT','research','AI','cyber','culture','arts','heritage','sustainable development','SDG','futures'] },
+  { sector: 'Economy, Finance & Labor', kw: ['economy','econom','finance','tax','tariff','invest','fiscal','budget','bank','banking','currency','trade','commerce','business','enterprise','industry','market','entrepreneur','worker','employ','wage','labor','livelihood','manpower','skill','occupat','OFW','overseas worker','migrant','tourism','cooperative','govern corporation','public enterprise','amusement','games'] },
+  { sector: 'Infrastructure & Public Services', kw: ['infrastructure','road','bridge','transport','highway','construct','urban','housing','resettlement','water supply','sewage','electricity','electrif','energy','power','communication','telecom','public works','public service'] },
+  { sector: 'Agriculture & Environment', kw: ['agriculture','agri','farm','fisher','fishing','crop','livestock','rice','coconut','rural','food secur','irrigat','environment','climate','ecolog','forest','biodiversit','waste','pollution','water resource','natural resource','green','organic','agrarian'] },
+  { sector: 'Justice, Law & Security', kw: ['justice','court','crime','anti-corruption','punish','penal','law enforce','illegal','drug','human right','civil right','legal','defense','military','armed','security','police','coast guard','AFP','PNP','disaster','emergency','terrorism','peace','unification','reconciliation','foreign relation','constitution','amendment'] },
+  { sector: 'Governance & Internal Affairs', kw: ['government','governance','transparency','accountability','election','suffrage','autonomy','local government','congress','senate','bureaucra','civil service','reorganization','professional regulation','blue ribbon','investigation','public officer','media','ethics','privilege','rules','public information','transparency'] },
 ];
 
 const SECTOR_CLASS = {
-  Education:'st-edu', Health:'st-health', Agriculture:'st-agri', Infrastructure:'st-infra',
-  Economy:'st-econ', Justice:'st-justice', Environment:'st-env', Social:'st-social',
-  Labor:'st-labor', Science:'st-science', Defense:'st-defense', Governance:'st-gov'
+  'Social Services & Human Development': 'st-sshd',
+  'Education, Science & Culture': 'st-esc',
+  'Economy, Finance & Labor': 'st-efl',
+  'Infrastructure & Public Services': 'st-ips',
+  'Agriculture & Environment': 'st-ae',
+  'Justice, Law & Security': 'st-jls',
+  'Governance & Internal Affairs': 'st-gia'
 };
 
 function classifyBill(title='', subjects=[]) {
@@ -42,7 +41,7 @@ function classifyBill(title='', subjects=[]) {
       if (found.length >= 3) break;
     }
   }
-  return found.length ? found : ['Governance'];
+  return found.length ? found : ['Governance & Internal Affairs'];
 }
 
 function sectorTag(s) {
@@ -451,7 +450,7 @@ async function initBillsTab() {
   view.innerHTML = '';
 
   try {
-    const senData = await apiFetch('/congresses/19/senators?limit=100');
+    const senData = await apiFetch('/people?type=senator&congress=19&limit=100&sort=last_name&dir=asc');
     const rawList = Array.isArray(senData) ? senData : (senData.senators || []);
 
     const BATCH = 5;
@@ -459,7 +458,9 @@ async function initBillsTab() {
     for (let i = 0; i < rawList.length; i += BATCH) {
       const batch = rawList.slice(i, i + BATCH);
       const batchRes = await Promise.allSettled(batch.map(async sen => {
-        const bills = await fetchAllPaginated(`/people/${sen.id}/bills?congress=19&type=sb`);
+        const searchTerm = encodeURIComponent(sen.last_name || sen.first_name || sen.name || '');
+        const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=19&type=sb&sort=date_filed&dir=desc`);
+        const bills = billsRaw.filter(b => Array.isArray(b.authors) && b.authors.some(a => a.id === sen.id));
         const passed = bills.filter(b => {
           const t = (b.title || '').toUpperCase();
           return t.startsWith('AN ACT') || (b.subjects || []).some(s => /enacted|republic act/i.test(s));
