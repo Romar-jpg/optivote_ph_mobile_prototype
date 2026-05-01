@@ -1,6 +1,9 @@
 'use strict';
 
-const BASE = 'https://open-congress-api.bettergov.ph/api';
+// API Configuration - use proxy for HTTP, direct for file://
+const BASE = window.location.protocol === 'file:' 
+  ? 'https://open-congress-api.bettergov.ph/api'
+  : 'http://localhost:3001/api';
 
 // ── Sector keyword map ──────────────────────────────────────────────
 const SECTOR_RULES = [
@@ -61,11 +64,27 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── Fetch helpers ───────────────────────────────────────────────────
 async function apiFetch(path) {
-  const res = await fetch(BASE + path);
-  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error?.message || 'API error');
-  return json.data;
+  try {
+    const res = await fetch(BASE + path, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!res.ok) {
+      console.error(`API Error: ${res.status} ${res.statusText}`, await res.text());
+      throw new Error(`API ${res.status}: ${res.statusText}`);
+    }
+    
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error?.message || 'API error');
+    return json.data;
+  } catch (error) {
+    console.error('Fetch error details:', error);
+    throw error;
+  }
 }
 
 async function fetchAllPaginated(path, paramSep='?') {
@@ -86,6 +105,28 @@ async function fetchAllPaginated(path, paramSep='?') {
 }
 
 // ── Load Senators ───────────────────────────────────────────────────
+async function testAPI() {
+  const testUrl = BASE + '/people?type=senator&congress=20&limit=5&sort=last_name&dir=asc';
+  console.log('Testing API connection to:', testUrl);
+  
+  try {
+    const res = await fetch(testUrl);
+    console.log('Response status:', res.status, res.statusText);
+    const json = await res.json();
+    console.log('Response body:', json);
+    
+    if (res.ok && json.success) {
+      alert('✅ API is working! You have ' + json.data.length + ' test senators.');
+    } else {
+      alert('❌ API returned an error:\n' + JSON.stringify(json.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Test error:', error);
+    const msg = error.message || String(error);
+    alert('❌ Connection failed:\n' + msg + '\n\nCheck browser console (F12) for more details.');
+  }
+}
+
 async function loadSenators() {
   const congress = document.getElementById('congressSelect').value;
   const loadBtn = document.getElementById('loadBtn');
@@ -107,7 +148,7 @@ async function loadSenators() {
 
   try {
     status.textContent = 'Fetching senators…';
-    const senData = await apiFetch(`/congresses/${congress}/senators?limit=100`);
+    const senData = await apiFetch(`/people?type=senator&congress=${congress}&limit=100&sort=last_name&dir=asc`);
     const rawList = Array.isArray(senData) ? senData : (senData.senators || []);
 
     if (!rawList.length) throw new Error('No senators returned for this congress.');
@@ -121,14 +162,16 @@ async function loadSenators() {
       const batch = rawList.slice(i, i + BATCH);
       const batchResults = await Promise.allSettled(
         batch.map(async (sen) => {
-          const billsRaw = await fetchAllPaginated(`/people/${sen.id}/bills?congress=${congress}&type=sb`);
-          const authored = billsRaw.length;
+          const searchTerm = encodeURIComponent(sen.last_name || sen.first_name || sen.name || '');
+          const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=${congress}&type=sb&sort=date_filed&dir=desc`);
+          const authoredBills = billsRaw.filter(b => Array.isArray(b.authors) && b.authors.some(a => a.id === sen.id));
+          const authored = authoredBills.length;
           // Heuristic: "passed" = bills whose title starts with "AN ACT" or subjects include enacted language
-          const passed = billsRaw.filter(b => {
+          const passed = authoredBills.filter(b => {
             const t = (b.title || '').toUpperCase();
             return t.startsWith('AN ACT') || (b.subjects || []).some(s => /enacted|republic act/i.test(s));
           }).length;
-          const sectors = [...new Set(billsRaw.flatMap(b => classifyBill(b.title, b.subjects || [])))].slice(0,4);
+          const sectors = [...new Set(authoredBills.flatMap(b => classifyBill(b.title, b.subjects || [])))].slice(0,4);
           return {
             id: sen.id,
             name: sen.full_name || `${sen.first_name || ''} ${sen.last_name || ''}`.trim(),
@@ -138,7 +181,7 @@ async function loadSenators() {
             v: passed,
             w: parseFloat(Math.max(0.1, authored > 0 ? 1 - (passed / authored) : 0.9).toFixed(2)),
             sectors,
-            bills: billsRaw.slice(0, 20),
+            bills: authoredBills.slice(0, 20),
             selected: false,
           };
         })
@@ -163,7 +206,15 @@ async function loadSenators() {
     renderGrid();
 
   } catch (e) {
-    err.textContent = '⚠ ' + (e.message || 'Failed to load data. Check network or API availability.');
+    const errorMsg = e.message || 'Failed to load data. Check network or API availability.';
+    console.error('Load error:', errorMsg);
+    
+    // Check if it's a CORS error
+    if (errorMsg.includes('NetworkError') || errorMsg.includes('Failed to fetch')) {
+      err.textContent = '⚠ CORS Error: The API may be blocking requests from this origin. Try opening the API directly: https://open-congress-api.bettergov.ph/api/people?type=senator&congress=19&limit=100&sort=last_name&dir=asc';
+    } else {
+      err.textContent = '⚠ ' + errorMsg;
+    }
     err.style.display = 'block';
     status.textContent = '';
   } finally {
