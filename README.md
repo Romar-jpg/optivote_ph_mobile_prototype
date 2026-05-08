@@ -44,11 +44,3 @@ node api/proxy.js
 ```
 
 Adjust ports in `api/proxy.js` as needed.
-
-## Contributing
-
-Pull requests and issues are welcome. For small changes, update files and open a PR.
-
-## License
-
-MIT — see LICENSE or add one if needed.
