@@ -54,6 +54,7 @@ let senators = [];        // [{id, name, party, authored, passed, v, w, sectors,
 let optimalIdxs = [];
 let activeSector = 'All';
 let billsData = [];       // for Bills tab
+let billsTabCongress = null; // track which congress bills were loaded for
 
 // ── Tabs ────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -171,10 +172,9 @@ async function loadSenators() {
           const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=${congress}&type=sb&sort=date_filed&dir=desc`);
           const authoredBills = billsRaw.filter(b => Array.isArray(b.authors) && b.authors.some(a => a.id === sen.id));
           const authored = authoredBills.length;
-          // Heuristic: "passed" = bills whose title starts with "AN ACT" or subjects include enacted language
+          // Heuristic: "passed" = bills with subjects indicating Republic Act or enactment
           const passed = authoredBills.filter(b => {
-            const t = (b.title || '').toUpperCase();
-            return t.startsWith('AN ACT') || (b.subjects || []).some(s => /enacted|republic act/i.test(s));
+            return (b.subjects || []).some(s => /republic act|enacted into law|ra \d+/i.test(s));
           }).length;
           const sectors = [...new Set(authoredBills.flatMap(b => classifyBill(b.title, b.subjects || [])))].slice(0,4);
           return {
@@ -248,7 +248,8 @@ function renderGrid() {
         </div>
       </div>
       <div class="metrics-row">
-        <span class="mpill mpill-neutral">Bills: ${s.authored}</span>
+        <span class="mpill mpill-neutral">Authored: ${s.authored}</span>
+        <span class="mpill mpill-neutral">Passed: ${s.passed}</span>
         ${s.authored > 0
           ? `<span class="mpill mpill-blue">V = ${s.v}</span><span class="mpill mpill-red">W = ${s.w.toFixed(2)}</span>`
           : `<span class="mpill mpill-gray">no bill data</span>`}
@@ -430,12 +431,17 @@ function runOptimizer() {
 let billsTabLoaded = false;
 
 async function initBillsTab() {
-  if (billsTabLoaded && billsData.length) { renderBillsView(); return; }
-
   const loader = document.getElementById('billsLoader');
   const err    = document.getElementById('billsError');
   const view   = document.getElementById('billsView');
   const congress = document.getElementById('congressSelect').value;
+  
+  // Reset if congress changed
+  if (congress !== billsTabCongress) {
+    billsTabLoaded = false;
+    billsData = [];
+  }
+  if (billsTabLoaded && billsData.length) { renderBillsView(); return; }
 
   // If senators already loaded from optimizer tab, reuse
   if (senators.length) {
@@ -453,18 +459,19 @@ async function initBillsTab() {
   try {
     const senData = await apiFetch(`/people?type=senator&congress=${congress}&limit=100&sort=last_name&dir=asc`);
     const rawList = Array.isArray(senData) ? senData : (senData.senators || []);
+    const statusEl = document.getElementById('billsStatus');
 
     const BATCH = 5;
     const results = [];
     for (let i = 0; i < rawList.length; i += BATCH) {
+      if (statusEl) statusEl.textContent = `Loading senator ${i+1}–${Math.min(i+BATCH, rawList.length)} of ${rawList.length}…`;
       const batch = rawList.slice(i, i + BATCH);
       const batchRes = await Promise.allSettled(batch.map(async sen => {
         const searchTerm = encodeURIComponent(sen.last_name || sen.first_name || sen.name || '');
         const billsRaw = await fetchAllPaginated(`/documents?search=${searchTerm}&congress=${congress}&type=sb&sort=date_filed&dir=desc`);
         const bills = billsRaw.filter(b => Array.isArray(b.authors) && b.authors.some(a => a.id === sen.id));
         const passed = bills.filter(b => {
-          const t = (b.title || '').toUpperCase();
-          return t.startsWith('AN ACT') || (b.subjects || []).some(s => /enacted|republic act/i.test(s));
+          return (b.subjects || []).some(s => /republic act|enacted into law|ra \d+/i.test(s));
         }).length;
         return {
           id: sen.id,
@@ -484,7 +491,9 @@ async function initBillsTab() {
     }
 
     billsData = results;
+    billsTabCongress = congress;
     billsTabLoaded = true;
+    if (statusEl) statusEl.textContent = '';
     renderBillsView();
 
   } catch (e) {
@@ -506,11 +515,52 @@ function renderBillsView() {
     return;
   }
 
-  view.innerHTML = data.map(s => {
+  // Build summary table
+  const summaryRows = data.sort((a, b) => b.authored - a.authored).map(s => {
+    const sectorCounts = {};
+    SECTOR_RULES.forEach(r => sectorCounts[r.sector] = 0);
+    s.bills.forEach(b => {
+      classifyBill(b.title, b.subjects || []).forEach(sec => {
+        if (sectorCounts[sec] !== undefined) sectorCounts[sec]++;
+      });
+    });
+    return { ...s, sectorCounts };
+  });
+  
+  const summaryHtml = `
+    <div class="bills-summary-table" style="margin-bottom:20px;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px;font-weight:600;">Senator</th>
+            <th style="text-align:right;padding:8px;font-weight:600;">Authored</th>
+            <th style="text-align:right;padding:8px;font-weight:600;">Passed</th>
+            ${SECTOR_RULES.map(r => `<th style="text-align:center;padding:8px;font-weight:600;">${r.sector.split(' ').slice(0,2).join(' ')}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${summaryRows.map((s, idx) => `
+            <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:#fafafe;' : ''}">
+              <td style="text-align:left;padding:8px;">
+                <strong>${s.name}</strong>
+                <br/><small style="color:var(--faint);">${s.party}</small>
+              </td>
+              <td style="text-align:right;padding:8px;font-family:'DM Mono',monospace;">${s.authored}</td>
+              <td style="text-align:right;padding:8px;font-family:'DM Mono',monospace;color:#10b981;">${s.passed}</td>
+              ${SECTOR_RULES.map(r => `<td style="text-align:center;padding:8px;font-family:'DM Mono',monospace;">${s.sectorCounts[r.sector] || 0}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Build senator blocks with collapsible bills (summary table will be appended below)
+  const senatorsHtml = data.map(s => {
     const filteredBills = activeSector === 'All'
       ? s.bills
       : s.bills.filter(b => classifyBill(b.title, b.subjects || []).includes(activeSector));
-
+    const blockId = `senbills-${s.id}`;
     return `
     <div class="senator-block">
       <div class="senator-block-top">
@@ -522,37 +572,53 @@ function renderBillsView() {
           ${s.sectors.map(sectorTag).join('')}
           <span class="mpill mpill-blue" style="font-size:11px">V=${s.v}</span>
           <span class="mpill mpill-red" style="font-size:11px">W=${s.w.toFixed(2)}</span>
+          <button class="toggle-bills" onclick="toggleBills('${blockId}')">Show bills ▾</button>
         </div>
       </div>
-      ${filteredBills.length ? `
-      <table class="bills-table">
-        <thead>
-          <tr>
-            <th>Bill number</th>
-            <th>Title</th>
-            <th>Sector(s)</th>
-            <th>Enacted?</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filteredBills.map(b => {
-            const enacted = b.title && b.title.toUpperCase().startsWith('AN ACT');
-            const secs = classifyBill(b.title, b.subjects || []);
-            return `<tr>
-              <td style="font-family:'DM Mono',monospace;font-size:11px;white-space:nowrap">${b.bill_number || b.id || '—'}</td>
-              <td style="max-width:320px">${b.title || '—'}</td>
-              <td>${secs.map(sectorTag).join(' ')}</td>
-              <td>
-                <span class="enacted-dot ${enacted ? 'dot-yes' : 'dot-no'}"></span>${enacted ? 'Yes' : 'No'}
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>` : '<p style="font-size:12.5px;color:var(--faint);padding:4px 0">No bills found for this sector filter.</p>'}
+      <div id="${blockId}" class="bills-collapsible">
+        ${filteredBills.length ? `
+        <table class="bills-table">
+          <thead>
+            <tr>
+              <th>Bill number</th>
+              <th>Title</th>
+              <th>Sector(s)</th>
+              <th>Enacted?</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredBills.map(b => {
+              const enacted = b.title && b.title.toUpperCase().startsWith('AN ACT');
+              const secs = classifyBill(b.title, b.subjects || []);
+              return `<tr>
+                <td style="font-family:'DM Mono',monospace;font-size:11px;white-space:nowrap">${b.bill_number || b.id || '—'}</td>
+                <td style="max-width:320px">${b.title || '—'}</td>
+                <td>${secs.map(sectorTag).join(' ')}</td>
+                <td>
+                  <span class="enacted-dot ${enacted ? 'dot-yes' : 'dot-no'}"></span>${enacted ? 'Yes' : 'No'}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : '<p style="font-size:12.5px;color:var(--faint);padding:4px 0">No bills found for this sector filter.</p>'}
+      </div>
     </div>`;
   }).join('');
+
+  // Place the summary table BELOW the list of senator blocks
+  view.innerHTML = senatorsHtml + summaryHtml;
+
 }
 
+// Toggle collapsible bills for a senator block
+function toggleBills(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isOpen = el.classList.toggle('open');
+  // update the button text inside the same parent
+  const btn = el.parentElement.querySelector('.toggle-bills');
+  if (btn) btn.textContent = isOpen ? 'Hide bills ▴' : 'Show bills ▾';
+}
 // Sector filters
 document.querySelectorAll('#sectorFilterBar .filter-chip').forEach(btn => {
   btn.addEventListener('click', () => {

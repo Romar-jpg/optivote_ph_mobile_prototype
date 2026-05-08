@@ -86,6 +86,17 @@
     font-family: 'DM Mono', monospace;
   }
 
+  .header-tagline a {
+    color: rgba(255,255,255,.45);
+    text-decoration: underline;
+    transition: color .15s;
+    text-decoration: none;
+  }
+
+  .header-tagline a:hover { 
+    color: var(--ph-gold); 
+  }
+
   /* ── TABS ── */
   .tabs-bar {
     background: var(--white);
@@ -484,6 +495,8 @@
   .mpill-red     { background: #fff1f1; color: #b91c1c; border: 1px solid #fecaca; }
   .mpill-gray    { background: #f0f0f4; color: var(--muted); border: 1px solid var(--border); font-style: italic; }
 
+
+
   .sectors-row { display: flex; gap: 4px; flex-wrap: wrap; }
 
   .stag {
@@ -664,6 +677,24 @@
   .bills-table td:first-child { color: var(--ink); font-weight: 400; }
   .bills-table tr:last-child td { border-bottom: none; }
   .bills-table tr:hover td { background: var(--surface); }
+
+  /* Collapsible bills toggle */
+  .toggle-bills {
+    margin-left: 8px;
+    padding: 6px 9px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--white);
+    cursor: pointer;
+    color: var(--muted);
+    font-family: 'Geist', sans-serif;
+  }
+
+  .toggle-bills:hover { border-color: var(--ph-blue); color: var(--ph-blue); }
+
+  .bills-collapsible { display: none; margin-top: 8px; }
+  .bills-collapsible.open { display: block; }
 
   .enacted-dot {
     display: inline-block;
