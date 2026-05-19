@@ -1,46 +1,36 @@
 # Optivote-PH
 
-> Lightweight client for Optivote PH — static frontend with a small API proxy.
+Lightweight mobile prototype for Optivote PH. This application helps users optimize their senatorial ballots based on legislative efficiency data.
 
-## Project structure
+## Project Structure
 
-- `index.html` — main app HTML
-- `index.js` — frontend JavaScript
-- `style.css` — styles
-- `api/proxy.js` — simple Node proxy for API requests
+- `lib/` — Flutter source code
+  - `main.dart` — App entry point and primary UI
+  - `app_colors.dart` — Custom theme colors
+  - `senator_card.dart` — UI component for displaying senator information
+  - `optimizer_engine.dart` — Logic for the ballot optimization algorithm
+- `assets/` — Data files (e.g., `senators_bill.csv`)
+- `test/` — Widget and unit tests
 
 ## Requirements
 
-- Node.js (for the API proxy)
-- A static file server or a browser (you can open `index.html` directly)
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- Android Studio / VS Code with Flutter extensions
 
-## Run (quick)
+## Getting Started
 
-Open `index.html` in your browser for a quick local test.
+1.  **Install dependencies:**
+    ```bash
+    flutter pub get
+    ```
 
-## Run with a static server (recommended)
+2.  **Run the application:**
+    ```bash
+    flutter run
+    ```
 
-Using Python (if installed):
+## Features
 
-```bash
-python -m http.server 8000
-# then open http://localhost:8000
-```
-
-Or using `http-server` (npm):
-
-```bash
-npx http-server -c-1 . -p 8000
-# then open http://localhost:8000
-```
-
-## Run the API proxy
-
-If you need the proxy in `api/proxy.js`, start it with Node:
-
-```bash
-node api/proxy.js
-# defaults: http://localhost:3000 (check file for details)
-```
-
-Adjust ports in `api/proxy.js` as needed.
+- **Optimizer:** A Branch & Bound engine that suggests an optimal slate of 12 senators based on their "efficiency weight" (Passed Bills / Authored Bills).
+- **Data-driven:** Uses real legislative data from `assets/senators_bill.csv`.
+- **Dynamic Selection:** Manual selection with real-time feedback on ballot weight and count.
