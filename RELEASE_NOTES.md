@@ -1,5 +1,21 @@
 # Release Notes
 
+## v1.0.1 — 2026-05-12 - 2026-05-19
+
+Summary
+- Full migration from legacy HTML/CSS/JS to a Flutter mobile prototype.
+- Implementation of Sector-Based Prioritization.
+- Complete UI/UX redesign for mobile experience.
+
+Notable details
+- **Legacy Cleanup:** Removed all old HTML, CSS, and JS files. The project is now a dedicated Flutter application.
+- **Bill Sectors:** Users can now select specific committee priorities (e.g., Agriculture & Environment, Education, Science & Culture). The optimization engine dynamically adjusts senator "Value" (V) based on these choices.
+- **Redesigned Sectors UI:** Implemented a modern grid-based selection screen with custom icons and descriptive subtitles.
+- **Expanded About Section:** Added detailed information about the project mission (combatting disinformation), the Branch & Bound algorithm, the Knapsack Problem, and the development team (PUP BSCS 2-6).
+- **Data Persistence:** Migrated legislative data to a local `assets/senators_bill.csv` for faster, offline access.
+
+---
+
 ## v0.1.0 — 2026-05-08
 
 Summary

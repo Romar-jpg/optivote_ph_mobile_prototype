@@ -6,9 +6,9 @@ class Senator {
   final String party;
   final int authored;
   final int passed;
-  final double v;
-  final double w;
-  final List<String> sectors;
+  double v; // Productivity Value (can be weighted by sectors)
+  final double w; // Inefficiency Weight
+  final Map<String, int> sectorPassed;
 
   Senator({
     required this.name,
@@ -17,7 +17,7 @@ class Senator {
     required this.passed,
     required this.v,
     required this.w,
-    required this.sectors,
+    required this.sectorPassed,
   });
 }
 
