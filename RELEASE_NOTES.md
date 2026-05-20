@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.1.0 — 2026-05-20
+Summary 
+- Added exclude senator to optimizer
+
+Next step 
+- profile for each senator
+- other updates
+
 ## v1.0.1 — 2026-05-12 - 2026-05-19
 
 Summary

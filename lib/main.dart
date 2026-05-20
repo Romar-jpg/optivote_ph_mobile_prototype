@@ -4,7 +4,8 @@ import 'package:csv/csv.dart';
 import 'package:flutter/foundation.dart';
 import 'app_colors.dart';
 import 'senator_card.dart';
-import 'optimizer_engine.dart'; // Make sure this file exists with the algorithm!
+import 'optimizer_engine.dart';
+import 'senator_profile.dart'; // Add this import
 
 void main() {
   runApp(
@@ -270,17 +271,18 @@ class OptimizerScreen extends StatefulWidget {
 
 class _OptimizerScreenState extends State<OptimizerScreen> {
   final Set<int> _selectedIndices = {};
+  final Set<int> _excludedIndices = {};
   List<Senator>? _localSenatorList;
 
   @override
   void didUpdateWidget(OptimizerScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If senators list changed from parent, or sectors changed, reset local list
     if (widget.senators != oldWidget.senators ||
         widget.selectedSectors != oldWidget.selectedSectors) {
       setState(() {
         _localSenatorList = null;
         _selectedIndices.clear();
+        _excludedIndices.clear();
       });
     }
   }
@@ -297,7 +299,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
   }
 
   void _toggleSelection(int index, Senator senator) {
-    if (senator.authored == 0) return;
+    if (senator.authored == 0 || _excludedIndices.contains(index)) return;
 
     setState(() {
       if (_selectedIndices.contains(index)) {
@@ -324,10 +326,96 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
     });
   }
 
+  void _toggleExclusion(int index) {
+    setState(() {
+      if (_excludedIndices.contains(index)) {
+        _excludedIndices.remove(index);
+      } else {
+        _selectedIndices.remove(index); // Remove from selection if excluded
+        _excludedIndices.add(index);
+      }
+    });
+  }
+
+  void _showSenatorActions(int index, Senator senator) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final isExcluded = _excludedIndices.contains(index);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8, bottom: 16),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  senator.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(
+                  isExcluded ? Icons.add_circle_outline : Icons.block_flipped,
+                  color: isExcluded ? AppColors.success : AppColors.phRed,
+                ),
+                title: Text(
+                  isExcluded ? "Include in Optimizer" : "Exclude from Optimizer",
+                  style: TextStyle(
+                    color: isExcluded ? AppColors.success : AppColors.phRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _toggleExclusion(index);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_search_outlined, color: AppColors.phBlue),
+                title: const Text(
+                  "View Senator Profile",
+                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SenatorProfileScreen(senator: senator),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _resetSelection() {
     setState(() {
       _selectedIndices.clear();
-      _localSenatorList = null; // Revert to alphabetical order from widget
+      _excludedIndices.clear();
+      _localSenatorList = null;
     });
   }
 
@@ -341,7 +429,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
         if (widget.selectedSectors.isNotEmpty)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: AppColors.phBlue.withOpacity(0.05),
+            color: AppColors.phBlue.withValues(alpha: 0.05),
             width: double.infinity,
             child: Text(
               "Focus: ${widget.selectedSectors.join(', ')}",
@@ -352,6 +440,14 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
               ),
             ),
           ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: Colors.grey.shade50,
+          child: const Text(
+            "Tap to select. Long-press to exclude from optimizer or view profile.",
+            style: TextStyle(fontSize: 11, color: AppColors.muted, fontStyle: FontStyle.italic),
+          ),
+        ),
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
@@ -367,7 +463,9 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
               return SenatorCard(
                 senator: senator,
                 isSelected: _selectedIndices.contains(index),
+                isExcluded: _excludedIndices.contains(index),
                 onTap: () => _toggleSelection(index, senator),
+                onLongPress: () => _showSenatorActions(index, senator),
               );
             },
           ),
@@ -379,7 +477,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
             border: const Border(top: BorderSide(color: AppColors.border)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 offset: const Offset(0, -4),
                 blurRadius: 8,
               ),
@@ -430,8 +528,15 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          // FILTER OUT EXCLUDED SENATORS
                           final eligible = _senatorList
-                              .where((s) => s.authored > 0)
+                              .asMap()
+                              .entries
+                              .where((entry) => 
+                                entry.value.authored > 0 && 
+                                !_excludedIndices.contains(entry.key)
+                              )
+                              .map((entry) => entry.value)
                               .toList();
 
                           if (eligible.isEmpty) {
@@ -451,15 +556,37 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
 
                           setState(() {
                             final winners = result.optimalSlate;
-                            final theRest = _senatorList
-                                .where((s) => !winners.contains(s))
+                            
+                            // 1. Get the names of currently excluded senators
+                            final excludedNames = _excludedIndices.map((i) => _senatorList[i].name).toSet();
+                            
+                            // 2. Separate into three groups: 
+                            //    - Winners (those suggested by the algorithm)
+                            //    - Excluded (those blacklisted by the user)
+                            //    - The Rest (unselected, non-excluded)
+                            
+                            final excludedSenators = _senatorList
+                                .where((s) => excludedNames.contains(s.name))
+                                .toList();
+                                
+                            final remainingSenators = _senatorList
+                                .where((s) => !winners.contains(s) && !excludedNames.contains(s.name))
                                 .toList();
 
-                            _localSenatorList = [...winners, ...theRest];
+                            // 3. Rebuild the list: Winners first, then unselected, then excluded at the absolute bottom
+                            _localSenatorList = [...winners, ...remainingSenators, ...excludedSenators];
 
+                            // 4. Update selection indices (first N items are winners)
                             _selectedIndices.clear();
                             for (int i = 0; i < winners.length; i++) {
                               _selectedIndices.add(i);
+                            }
+                            
+                            // 5. Update exclusion indices (last M items are excluded)
+                            _excludedIndices.clear();
+                            int startIndexForExclusion = winners.length + remainingSenators.length;
+                            for (int i = 0; i < excludedSenators.length; i++) {
+                              _excludedIndices.add(startIndexForExclusion + i);
                             }
                           });
 
@@ -597,7 +724,7 @@ class BillSectorsScreen extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -610,8 +737,8 @@ class BillSectorsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.2)
-                    : AppColors.phBlue.withOpacity(0.1),
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : AppColors.phBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -635,7 +762,7 @@ class BillSectorsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: isSelected
-                    ? Colors.white.withOpacity(0.8)
+                    ? Colors.white.withValues(alpha: 0.8)
                     : AppColors.muted,
               ),
             ),
@@ -649,7 +776,7 @@ class BillSectorsScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.phBlue.withOpacity(0.05),
+        color: AppColors.phBlue.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -832,7 +959,7 @@ class HowItWorksScreen extends StatelessWidget {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
