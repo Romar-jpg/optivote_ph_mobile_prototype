@@ -1,5 +1,8 @@
 # Release Notes
 
+## v0.1.3 — 2026-05-20
+- **Auto-Applying Priorities:** Removed the "Apply Priorities" button; sector selections are now applied instantly and persist across tabs.
+
 ## v0.1.2 — 2026-05-20
 Summary 
 - Added exclude senator to optimizer

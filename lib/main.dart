@@ -183,11 +183,6 @@ class _MainScreenState extends State<MainScreen> {
         selectedSectors: _selectedSectors,
         sectorDefinitions: _sectorDefinitions,
         onToggle: _toggleSector,
-        onApply: () {
-          setState(() {
-            _currentIndex = 0; // Go to Optimizer
-          });
-        },
       ),
       const HowItWorksScreen(),
     ];
@@ -647,14 +642,12 @@ class BillSectorsScreen extends StatelessWidget {
   final Set<String> selectedSectors;
   final List<Map<String, dynamic>> sectorDefinitions;
   final Function(String) onToggle;
-  final VoidCallback onApply;
 
   const BillSectorsScreen({
     super.key,
     required this.selectedSectors,
     required this.sectorDefinitions,
     required this.onToggle,
-    required this.onApply,
   });
 
   @override
@@ -701,10 +694,10 @@ class BillSectorsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               _buildDataProfile(),
+              const SizedBox(height: 32),
             ],
           ),
         ),
-        _buildApplyButton(),
       ],
     );
   }
@@ -814,34 +807,6 @@ class BillSectorsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildApplyButton() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: ElevatedButton(
-        onPressed: onApply,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.navy,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text("Apply Priorities", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(width: 8),
-            Icon(Icons.arrow_forward, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ── TAB 3: HOW IT WORKS (PLACEHOLDER) ──────────────────────────
