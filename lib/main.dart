@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'app_colors.dart';
 import 'senator_card.dart';
 import 'optimizer_engine.dart';
-import 'senator_profile.dart'; // Add this import
+import 'senator_profile.dart';
 
 void main() {
   runApp(
@@ -32,43 +32,43 @@ class _MainScreenState extends State<MainScreen> {
       'key': 'Social Services',
       'label': 'Social Services & Human Development',
       'desc': 'Welfare, health & social protection',
-      'icon': Icons.volunteer_activism_outlined
+      'icon': Icons.volunteer_activism_outlined,
     },
     {
       'key': 'Education',
       'label': 'Education, Science & Culture',
       'desc': 'Schools, research & cultural heritage',
-      'icon': Icons.school_outlined
+      'icon': Icons.school_outlined,
     },
     {
       'key': 'Economy',
       'label': 'Economy, Finance & Labor',
       'desc': 'Jobs, trade & fiscal policy',
-      'icon': Icons.payments_outlined
+      'icon': Icons.payments_outlined,
     },
     {
       'key': 'Infrastructure',
       'label': 'Infrastructure & Public Services',
       'desc': 'Transport, utilities & public works',
-      'icon': Icons.construction_outlined
+      'icon': Icons.construction_outlined,
     },
     {
       'key': 'Agriculture',
       'label': 'Agriculture & Environment',
       'desc': 'Food security & natural resources',
-      'icon': Icons.agriculture_outlined
+      'icon': Icons.agriculture_outlined,
     },
     {
       'key': 'Justice',
       'label': 'Justice, Law & Security',
       'desc': 'Legal reform, safety & human rights',
-      'icon': Icons.gavel_outlined
+      'icon': Icons.gavel_outlined,
     },
     {
       'key': 'Governance',
       'label': 'Governance & Internal Affairs',
       'desc': 'Public accountability & local govt',
-      'icon': Icons.account_balance_outlined
+      'icon': Icons.account_balance_outlined,
     },
   ];
 
@@ -119,7 +119,7 @@ class _MainScreenState extends State<MainScreen> {
             party: '—',
             authored: authored,
             passed: passed,
-            v: passed.toDouble(), // Default V is total passed
+            v: passed.toDouble(),
             w: double.parse(w.toStringAsFixed(2)),
             sectorPassed: sectorPassed,
           );
@@ -142,8 +142,6 @@ class _MainScreenState extends State<MainScreen> {
 
   void _toggleSector(String sector) {
     setState(() {
-      // In this new UI, "Economy" definition is linked to "Economy" CSV key, etc.
-      // But we need to be careful if multiple labels map to the same key or vice versa.
       if (_selectedSectors.contains(sector)) {
         _selectedSectors.remove(sector);
       } else {
@@ -216,10 +214,7 @@ class _MainScreenState extends State<MainScreen> {
           child: Container(color: AppColors.phGold, height: 3.0),
         ),
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -268,6 +263,9 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
   final Set<int> _selectedIndices = {};
   final Set<int> _excludedIndices = {};
   List<Senator>? _localSenatorList;
+
+  // Tracker for the background thread calculation
+  bool _isOptimizing = false;
 
   @override
   void didUpdateWidget(OptimizerScreen oldWidget) {
@@ -371,7 +369,9 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                   color: isExcluded ? AppColors.success : AppColors.phRed,
                 ),
                 title: Text(
-                  isExcluded ? "Include in Optimizer" : "Exclude from Optimizer",
+                  isExcluded
+                      ? "Include in Optimizer"
+                      : "Exclude from Optimizer",
                   style: TextStyle(
                     color: isExcluded ? AppColors.success : AppColors.phRed,
                     fontWeight: FontWeight.w600,
@@ -383,17 +383,24 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.person_search_outlined, color: AppColors.phBlue),
+                leading: const Icon(
+                  Icons.person_search_outlined,
+                  color: AppColors.phBlue,
+                ),
                 title: const Text(
                   "View Senator Profile",
-                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.ink),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SenatorProfileScreen(senator: senator),
+                      builder: (context) =>
+                          SenatorProfileScreen(senator: senator),
                     ),
                   );
                 },
@@ -440,7 +447,11 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
           color: Colors.grey.shade50,
           child: const Text(
             "Tap to select. Long-press to exclude from optimizer or view profile.",
-            style: TextStyle(fontSize: 11, color: AppColors.muted, fontStyle: FontStyle.italic),
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.muted,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ),
         Expanded(
@@ -522,81 +533,114 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          // FILTER OUT EXCLUDED SENATORS
-                          final eligible = _senatorList
-                              .asMap()
-                              .entries
-                              .where((entry) => 
-                                entry.value.authored > 0 && 
-                                !_excludedIndices.contains(entry.key)
+                        onPressed: _isOptimizing
+                            ? null
+                            : () async {
+                                final eligible = _senatorList
+                                    .asMap()
+                                    .entries
+                                    .where(
+                                      (entry) =>
+                                          entry.value.authored > 0 &&
+                                          !_excludedIndices.contains(entry.key),
+                                    )
+                                    .map((entry) => entry.value)
+                                    .toList();
+
+                                if (eligible.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'No eligible senators to optimize.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                setState(() {
+                                  _isOptimizing = true;
+                                });
+
+                                final result = await compute(
+                                  runOptimizerInBackground,
+                                  {
+                                    'eligible': eligible,
+                                    'cap': 9.0,
+                                    'maxCount': 12,
+                                  },
+                                );
+
+                                setState(() {
+                                  _isOptimizing = false;
+                                  final winners = result.optimalSlate;
+
+                                  final excludedNames = _excludedIndices
+                                      .map((i) => _senatorList[i].name)
+                                      .toSet();
+
+                                  final excludedSenators = _senatorList
+                                      .where(
+                                        (s) => excludedNames.contains(s.name),
+                                      )
+                                      .toList();
+
+                                  final remainingSenators = _senatorList
+                                      .where(
+                                        (s) =>
+                                            !winners.contains(s) &&
+                                            !excludedNames.contains(s.name),
+                                      )
+                                      .toList();
+
+                                  _localSenatorList = [
+                                    ...winners,
+                                    ...remainingSenators,
+                                    ...excludedSenators,
+                                  ];
+
+                                  _selectedIndices.clear();
+                                  for (int i = 0; i < winners.length; i++) {
+                                    _selectedIndices.add(i);
+                                  }
+
+                                  _excludedIndices.clear();
+                                  int startIndexForExclusion =
+                                      winners.length + remainingSenators.length;
+                                  for (
+                                    int i = 0;
+                                    i < excludedSenators.length;
+                                    i++
+                                  ) {
+                                    _excludedIndices.add(
+                                      startIndexForExclusion + i,
+                                    );
+                                  }
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Optimal Slate Found! Value: ${result.totalValue} | W: ${result.totalWeight.toStringAsFixed(2)}',
+                                    ),
+                                    backgroundColor: AppColors.success,
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                              },
+                        icon: _isOptimizing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
-                              .map((entry) => entry.value)
-                              .toList();
-
-                          if (eligible.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No eligible senators to optimize.'),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final result = OptimizerEngine.runOptimizer(
-                            eligible,
-                            9.0,
-                            12,
-                          );
-
-                          setState(() {
-                            final winners = result.optimalSlate;
-                            
-                            // 1. Get the names of currently excluded senators
-                            final excludedNames = _excludedIndices.map((i) => _senatorList[i].name).toSet();
-                            
-                            // 2. Separate into three groups: 
-                            //    - Winners (those suggested by the algorithm)
-                            //    - Excluded (those blacklisted by the user)
-                            //    - The Rest (unselected, non-excluded)
-                            
-                            final excludedSenators = _senatorList
-                                .where((s) => excludedNames.contains(s.name))
-                                .toList();
-                                
-                            final remainingSenators = _senatorList
-                                .where((s) => !winners.contains(s) && !excludedNames.contains(s.name))
-                                .toList();
-
-                            // 3. Rebuild the list: Winners first, then unselected, then excluded at the absolute bottom
-                            _localSenatorList = [...winners, ...remainingSenators, ...excludedSenators];
-
-                            // 4. Update selection indices (first N items are winners)
-                            _selectedIndices.clear();
-                            for (int i = 0; i < winners.length; i++) {
-                              _selectedIndices.add(i);
-                            }
-                            
-                            // 5. Update exclusion indices (last M items are excluded)
-                            _excludedIndices.clear();
-                            int startIndexForExclusion = winners.length + remainingSenators.length;
-                            for (int i = 0; i < excludedSenators.length; i++) {
-                              _excludedIndices.add(startIndexForExclusion + i);
-                            }
-                          });
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Optimal Slate Found! Value: ${result.totalValue} | W: ${result.totalWeight.toStringAsFixed(2)}',
-                              ),
-                              backgroundColor: AppColors.success,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.play_arrow, size: 18),
-                        label: const Text('Run Optimizer'),
+                            : const Icon(Icons.play_arrow, size: 18),
+                        label: Text(
+                          _isOptimizing ? 'Calculating...' : 'Run Optimizer',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.phRed,
                           foregroundColor: Colors.white,
@@ -613,9 +657,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                       onPressed: _resetSelection,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.muted,
-                        side: const BorderSide(
-                          color: AppColors.borderStrong,
-                        ),
+                        side: const BorderSide(color: AppColors.borderStrong),
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
                           horizontal: 16,
@@ -806,10 +848,10 @@ class BillSectorsScreen extends StatelessWidget {
       ),
     );
   }
-
 }
 
 // ── TAB 3: HOW IT WORKS (PLACEHOLDER) ──────────────────────────
+// ── TAB 3: HOW IT WORKS ──────────────────────────
 class HowItWorksScreen extends StatelessWidget {
   const HowItWorksScreen({super.key});
 
@@ -820,7 +862,6 @@ class HowItWorksScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title Section
           Center(
             child: Column(
               children: [
@@ -848,13 +889,15 @@ class HowItWorksScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // THE PROBLEM
+          // NEW: Quick Start Guide right at the top
+          _buildQuickStartCard(),
+
+          // UPDATED: The Problem (Now with paragraph breaks!)
           _buildAboutCard(
             "The Problem",
-            "The Philippines has been labeled \"Patient Zero\" for global disinformation as the 2016 elections first demonstrated how coordinated fake news and troll farms could be used to manipulate public opinion. This crisis specifically targets voters who may have limited access to reliable news, leading many to choose candidates based on fame or emotional appeal rather than actual performance. To combat this, OptiVote PH was developed as a data-driven tool that uses mathematical algorithms to cut through the noise of propaganda. By analyzing official Senate records, this tool helps voters identify high-performing legislators, create objective, merit-based results, and restore the integrity of the democratic process.",
+            "The Philippines has been labeled \"Patient Zero\" for global disinformation as the 2016 elections first demonstrated how coordinated fake news and troll farms could be used to manipulate public opinion.\n\nThis crisis specifically targets voters who may have limited access to reliable news, leading many to choose candidates based on fame or emotional appeal rather than actual performance.\n\nTo combat this, OptiVote PH was developed as a data-driven tool that uses mathematical algorithms to cut through the noise of propaganda. By analyzing official Senate records, this tool helps voters identify high-performing legislators, create objective, merit-based results, and restore the integrity of the democratic process.",
           ),
 
-          // THE PROCESS & ALGORITHM
           _buildAboutCard(
             "The Process & Algorithm",
             "How does OptiVote PH turn raw data into an optimized slate? There are four primary steps in calculating the best combination of senators based on their records and your chosen priorities.",
@@ -862,21 +905,31 @@ class HowItWorksScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                _buildAlgorithmStep("1", "The tool gathers official records and allows you to select specific bill categories (sectors). It filters the productivity data to focus only on the issues you care about most."),
-                _buildAlgorithmStep("2", "Using those filtered metrics, it applies the Branch and Bound Approach to the 0/1 Knapsack Problem. It finds the best possible group of twelve that stays under the inefficiency limit."),
-                _buildAlgorithmStep("3", "Once the most optimal 12-person slate is found, the tool applies Shaker Sort to rank the winners from highest to lowest legislative value in your chosen category."),
-                _buildAlgorithmStep("4", "The tool presents your ranked Top 12 list, providing a verifiable, merit-based cheat sheet for your ballot."),
+                _buildAlgorithmStep(
+                  "1",
+                  "The tool gathers official records and allows you to select specific bill categories (sectors). It filters the productivity data to focus only on the issues you care about most.",
+                ),
+                _buildAlgorithmStep(
+                  "2",
+                  "Using those filtered metrics, it applies the Branch and Bound Approach to the 0/1 Knapsack Problem. It finds the best possible group of twelve that stays under the inefficiency limit.",
+                ),
+                _buildAlgorithmStep(
+                  "3",
+                  "Once the most optimal 12-person slate is found, the tool applies Shaker Sort to rank the winners from highest to lowest legislative value in your chosen category.",
+                ),
+                _buildAlgorithmStep(
+                  "4",
+                  "The tool presents your ranked Top 12 list, providing a verifiable, merit-based cheat sheet for your ballot.",
+                ),
               ],
             ),
           ),
 
-          // SCOPE & LIMITATIONS
           _buildAboutCard(
             "Scope & Limitations",
             "OptiVote PH focuses on creating an optimized Top 12 senatorial list by looking strictly at how effective candidates are at passing laws. Each candidate is assigned a value based on their legislative efficiency ratio. By treating the twelve available ballot slots like a backpack with a limited capacity (the Knapsack Problem), the tool mathematically picks the group of senators that offers the highest combined success rate.\n\nHowever, there are a few limitations to keep in mind. First, the tool only works for incumbent or returning senators as it requires historical data from the official Senate database. New candidates will not have a record. Second, it is strictly data-driven and ignores subjective factors like social media popularity, public approval ratings, or a candidate's celebrity status. Finally, the system focuses on legislative output and bill success rates rather than the quality or political ideology of the laws themselves.",
           ),
 
-          // THE DEVELOPMENT TEAM
           _buildAboutCard(
             "The Development Team",
             "We are second-year Bachelor of Science in Computer Science students from PUP Sta. Mesa (SY 2025–2026), dedicated to creating data-driven solutions for modern challenges. This website serves as our final project for the Design and Analysis of Algorithms course, developed under the guidance of Professor Ria Sagum. By applying algorithm designs and techniques from our lectures to real-world legislative data, we aim to provide the electorate with a more objective perspective on governance.",
@@ -897,10 +950,19 @@ class HowItWorksScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildTeamMember("Cilon, Rachel Anne", "@rachelannec"),
-                      _buildTeamMember("Cusipag, Julian Lawrence M.", "@JRenMC"),
+                      _buildTeamMember(
+                        "Cusipag, Julian Lawrence M.",
+                        "@JRenMC",
+                      ),
                       _buildTeamMember("Gallaza, Romar M.", "@Romar-jpg"),
-                      _buildTeamMember("Javines, Kathy Nicole E.", "@kn24javines-dev"),
-                      _buildTeamMember("Mendoza, Aaron Kerk P.", "@lhadypirena"),
+                      _buildTeamMember(
+                        "Javines, Kathy Nicole E.",
+                        "@kn24javines-dev",
+                      ),
+                      _buildTeamMember(
+                        "Mendoza, Aaron Kerk P.",
+                        "@lhadypirena",
+                      ),
                     ],
                   ),
                 ),
@@ -908,6 +970,56 @@ class HowItWorksScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  // NEW HELPER WIDGET: The Quick Start Card
+  Widget _buildQuickStartCard() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.phBlue.withValues(alpha: 0.05), // Subtle blue tint
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.phBlue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.bolt, color: AppColors.phBlue),
+              SizedBox(width: 8),
+              Text(
+                "How to Use OptiVote PH",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.navy,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildAlgorithmStep(
+            "1",
+            "Go to the Sectors tab and select the issues you care about most.",
+          ),
+          _buildAlgorithmStep(
+            "2",
+            "Review candidate records in the Optimizer tab.",
+          ),
+          _buildAlgorithmStep(
+            "3",
+            "Long-press any senator to exclude them or view their full profile.",
+          ),
+          _buildAlgorithmStep(
+            "4",
+            "Tap Run Optimizer to calculate your perfect 12-person slate.",
+          ),
         ],
       ),
     );
@@ -1007,4 +1119,15 @@ class HowItWorksScreen extends StatelessWidget {
       ),
     );
   }
+} // <-- HowItWorksScreen ends correctly right here
+
+// ── ISOLATE HELPER FUNCTION ───────────────────────────────────
+// This MUST be a top-level function (outside any class) so Flutter
+// can spawn it on a separate background thread.
+OptimizerResult runOptimizerInBackground(Map<String, dynamic> args) {
+  return OptimizerEngine.runOptimizer(
+    args['eligible'] as List<Senator>,
+    args['cap'] as double,
+    args['maxCount'] as int,
+  );
 }
