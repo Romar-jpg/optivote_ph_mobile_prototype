@@ -25,7 +25,7 @@ class SenatorCard extends StatelessWidget {
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: isExcluded ? AppColors.surface : AppColors.white,
           borderRadius: BorderRadius.circular(12),
@@ -77,14 +77,16 @@ class SenatorCard extends StatelessWidget {
                                 : null,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          senator.party,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.faint,
+                        if (senator.party.isNotEmpty && senator.party != '—') ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            senator.party,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.faint,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -117,7 +119,7 @@ class SenatorCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,

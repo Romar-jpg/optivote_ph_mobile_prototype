@@ -455,24 +455,50 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
           ),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 400,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              mainAxisExtent: 135,
-            ),
-            itemCount: _senatorList.length,
-            itemBuilder: (context, index) {
-              final senator = _senatorList[index];
-              return SenatorCard(
-                senator: senator,
-                isSelected: _selectedIndices.contains(index),
-                isExcluded: _excludedIndices.contains(index),
-                onTap: () => _toggleSelection(index, senator),
-                onLongPress: () => _showSenatorActions(index, senator),
-              );
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // On mobile screens (width < 600), use a ListView to allow cards to
+              // size themselves dynamically and avoid vertical layout overflows.
+              if (constraints.maxWidth < 600) {
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _senatorList.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final senator = _senatorList[index];
+                    return SenatorCard(
+                      senator: senator,
+                      isSelected: _selectedIndices.contains(index),
+                      isExcluded: _excludedIndices.contains(index),
+                      onTap: () => _toggleSelection(index, senator),
+                      onLongPress: () => _showSenatorActions(index, senator),
+                    );
+                  },
+                );
+              } else {
+                // On wider screens (tablets/desktops), display in a multi-column grid
+                // with a slightly larger mainAxisExtent to accommodate wrapped pills.
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 400,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: 145,
+                  ),
+                  itemCount: _senatorList.length,
+                  itemBuilder: (context, index) {
+                    final senator = _senatorList[index];
+                    return SenatorCard(
+                      senator: senator,
+                      isSelected: _selectedIndices.contains(index),
+                      isExcluded: _excludedIndices.contains(index),
+                      onTap: () => _toggleSelection(index, senator),
+                      onLongPress: () => _showSenatorActions(index, senator),
+                    );
+                  },
+                );
+              }
             },
           ),
         ),

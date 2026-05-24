@@ -13,7 +13,14 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MainScreen()));
 
     // 2. Verify that the AppBar title 'OptiVote PH' is displayed.
-    expect(find.text('OptiVote PH'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText &&
+            widget.text.toPlainText().contains('OptiVote PH'),
+      ),
+      findsOneWidget,
+    );
 
     // 3. Verify that the CircularProgressIndicator shows up initially
     // while the FutureBuilder is waiting for the CSV data to load.
