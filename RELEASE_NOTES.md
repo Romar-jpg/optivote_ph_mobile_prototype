@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.1.4 — 2026-05-23 - 2026-05-24
+- Added profile page for each senator
+- Fixed overflow
+
 ## v0.1.3 — 2026-05-20
 - **Auto-Applying Priorities:** Removed the "Apply Priorities" button; sector selections are now applied instantly and persist across tabs.
 
