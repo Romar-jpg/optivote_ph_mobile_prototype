@@ -26,8 +26,18 @@ class OptimizerResult {
   final List<Senator> optimalSlate;
   final double totalValue;
   final double totalWeight;
+  final int nodesExplored;
+  final int branchesPruned;
+  final int executionTimeUs;
 
-  OptimizerResult(this.optimalSlate, this.totalValue, this.totalWeight);
+  OptimizerResult(
+    this.optimalSlate,
+    this.totalValue,
+    this.totalWeight,
+    this.nodesExplored,
+    this.branchesPruned,
+    this.executionTimeUs,
+  );
 }
 
 // 3. The Algorithm Engine (Make sure it is capitalized exactly like this!)
@@ -69,6 +79,10 @@ class OptimizerEngine {
     double cap,
     int maxCount,
   ) {
+    final stopwatch = Stopwatch()..start();
+    int nodesExplored = 0;
+    int branchesPruned = 0;
+
     // Sort by value/weight ratio descending to optimize pruning
     List<Senator> sorted = List.from(eligible);
     sorted.sort((a, b) => (b.v / b.w).compareTo(a.v / a.w));
@@ -78,6 +92,8 @@ class OptimizerEngine {
 
     // Recursive Branch & Bound function
     void bb(int idx, int count, double curW, double curV, List<int> chosen) {
+      nodesExplored++;
+
       if (count == maxCount && curW <= cap) {
         if (curV > bestV) {
           bestV = curV;
@@ -94,7 +110,10 @@ class OptimizerEngine {
       }
 
       double bound = _upperBound(sorted, idx, count, curW, curV, cap, maxCount);
-      if (bound <= bestV) return; // Prune branch
+      if (bound <= bestV) {
+        branchesPruned++;
+        return; // Prune branch
+      }
 
       Senator item = sorted[idx];
 
@@ -118,7 +137,16 @@ class OptimizerEngine {
     _shakerSort(optimalSlate);
 
     double totalW = optimalSlate.fold(0.0, (sum, s) => sum + s.w);
-    return OptimizerResult(optimalSlate, bestV, totalW);
+    stopwatch.stop();
+
+    return OptimizerResult(
+      optimalSlate,
+      bestV,
+      totalW,
+      nodesExplored,
+      branchesPruned,
+      stopwatch.elapsedMicroseconds,
+    );
   }
 
   // Sorts the final slate highest to lowest

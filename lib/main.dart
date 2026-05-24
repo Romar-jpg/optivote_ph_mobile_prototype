@@ -6,6 +6,7 @@ import 'app_colors.dart';
 import 'senator_card.dart';
 import 'optimizer_engine.dart';
 import 'senator_profile.dart';
+import 'algorithm_insights.dart';
 
 void main() {
   runApp(
@@ -26,6 +27,8 @@ class _MainScreenState extends State<MainScreen> {
   List<Senator>? _allSenators;
   final Set<String> _selectedSectors = {};
   bool _isLoading = true;
+  OptimizerResult? _latestResult;
+  int _eligibleCount = 0;
 
   final List<Map<String, dynamic>> _sectorDefinitions = [
     {
@@ -148,6 +151,8 @@ class _MainScreenState extends State<MainScreen> {
         _selectedSectors.add(sector);
       }
       _updateSenatorValues();
+      _latestResult = null;
+      _eligibleCount = 0;
     });
   }
 
@@ -176,6 +181,18 @@ class _MainScreenState extends State<MainScreen> {
           : OptimizerScreen(
               senators: _allSenators ?? [],
               selectedSectors: _selectedSectors,
+              onOptimizationComplete: (result, eligibleCount) {
+                setState(() {
+                  _latestResult = result;
+                  _eligibleCount = eligibleCount;
+                });
+              },
+              onReset: () {
+                setState(() {
+                  _latestResult = null;
+                  _eligibleCount = 0;
+                });
+              },
             ),
       BillSectorsScreen(
         selectedSectors: _selectedSectors,
@@ -209,6 +226,24 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
         ),
+        actions: [
+          if (_currentIndex == 0)
+            IconButton(
+              icon: const Icon(Icons.analytics_outlined, color: Colors.white),
+              tooltip: 'Algorithm Diagnostics',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AlgorithmInsightsScreen(
+                      result: _latestResult,
+                      eligibleCount: _eligibleCount,
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3.0),
           child: Container(color: AppColors.phGold, height: 3.0),
@@ -248,11 +283,15 @@ class _MainScreenState extends State<MainScreen> {
 class OptimizerScreen extends StatefulWidget {
   final List<Senator> senators;
   final Set<String> selectedSectors;
+  final Function(OptimizerResult result, int eligibleCount) onOptimizationComplete;
+  final VoidCallback onReset;
 
   const OptimizerScreen({
     super.key,
     required this.senators,
     required this.selectedSectors,
+    required this.onOptimizationComplete,
+    required this.onReset,
   });
 
   @override
@@ -419,6 +458,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
       _excludedIndices.clear();
       _localSenatorList = null;
     });
+    widget.onReset();
   }
 
   @override
@@ -600,6 +640,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                                 setState(() {
                                   _isOptimizing = false;
                                   final winners = result.optimalSlate;
+                                  widget.onOptimizationComplete(result, eligible.length);
 
                                   final excludedNames = _excludedIndices
                                       .map((i) => _senatorList[i].name)
