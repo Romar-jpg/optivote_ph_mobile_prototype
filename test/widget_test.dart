@@ -12,12 +12,12 @@ void main() {
     // We wrap MainScreen in a MaterialApp just like your main() function does.
     await tester.pumpWidget(const MaterialApp(home: MainScreen()));
 
-    // 2. Verify that the AppBar title 'OptiVote PH' is displayed.
+    // 2. Verify that the AppBar title 'Optivote PH' is displayed.
     expect(
       find.byWidgetPredicate(
         (widget) =>
             widget is RichText &&
-            widget.text.toPlainText().contains('OptiVote PH'),
+            widget.text.toPlainText().contains('Optivote PH'),
       ),
       findsOneWidget,
     );

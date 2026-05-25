@@ -207,7 +207,7 @@ class _MainScreenState extends State<MainScreen> {
                 children: [
                   TextSpan(text: 'Opti'),
                   TextSpan(
-                    text: 'Vote ',
+                    text: 'vote ',
                     style: TextStyle(
                       color: AppColors.phGold,
                       fontStyle: FontStyle.italic,
@@ -938,12 +938,12 @@ class HowItWorksScreen extends StatelessWidget {
           // UPDATED: The Problem (Now with paragraph breaks!)
           _buildAboutCard(
             "The Problem",
-            "The Philippines has been labeled \"Patient Zero\" for global disinformation as the 2016 elections first demonstrated how coordinated fake news and troll farms could be used to manipulate public opinion.\n\nThis crisis specifically targets voters who may have limited access to reliable news, leading many to choose candidates based on fame or emotional appeal rather than actual performance.\n\nTo combat this, OptiVote PH was developed as a data-driven tool that uses mathematical algorithms to cut through the noise of propaganda. By analyzing official Senate records, this tool helps voters identify high-performing legislators, create objective, merit-based results, and restore the integrity of the democratic process.",
+            "The Philippines has been labeled \"Patient Zero\" for global disinformation as the 2016 elections first demonstrated how coordinated fake news and troll farms could be used to manipulate public opinion.\n\nThis crisis specifically targets voters who may have limited access to reliable news, leading many to choose candidates based on fame or emotional appeal rather than actual performance.\n\nTo combat this, Optivote PH was developed as a data-driven tool that uses mathematical algorithms to cut through the noise of propaganda. By analyzing official Senate records, this tool helps voters identify high-performing legislators, create objective, merit-based results, and restore the integrity of the democratic process.",
           ),
 
           _buildAboutCard(
             "The Process & Algorithm",
-            "How does OptiVote PH turn raw data into an optimized slate? There are four primary steps in calculating the best combination of senators based on their records and your chosen priorities.",
+            "How does Optivote PH turn raw data into an optimized slate? There are four primary steps in calculating the best combination of senators based on their records and your chosen priorities.",
             extra: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -970,7 +970,7 @@ class HowItWorksScreen extends StatelessWidget {
 
           _buildAboutCard(
             "Scope & Limitations",
-            "OptiVote PH focuses on creating an optimized Top 12 senatorial list by looking strictly at how effective candidates are at passing laws. Each candidate is assigned a value based on their legislative efficiency ratio. By treating the twelve available ballot slots like a backpack with a limited capacity (the Knapsack Problem), the tool mathematically picks the group of senators that offers the highest combined success rate.\n\nHowever, there are a few limitations to keep in mind. First, the tool only works for incumbent or returning senators as it requires historical data from the official Senate database. New candidates will not have a record. Second, it is strictly data-driven and ignores subjective factors like social media popularity, public approval ratings, or a candidate's celebrity status. Finally, the system focuses on legislative output and bill success rates rather than the quality or political ideology of the laws themselves.",
+            "Optivote PH focuses on creating an optimized Top 12 senatorial list by looking strictly at how effective candidates are at passing laws. Each candidate is assigned a value based on their legislative efficiency ratio. By treating the twelve available ballot slots like a backpack with a limited capacity (the Knapsack Problem), the tool mathematically picks the group of senators that offers the highest combined success rate.\n\nHowever, there are a few limitations to keep in mind. First, the tool only works for incumbent or returning senators as it requires historical data from the official Senate database. New candidates will not have a record. Second, it is strictly data-driven and ignores subjective factors like social media popularity, public approval ratings, or a candidate's celebrity status. Finally, the system focuses on legislative output and bill success rates rather than the quality or political ideology of the laws themselves.",
           ),
 
           _buildAboutCard(
@@ -1037,7 +1037,7 @@ class HowItWorksScreen extends StatelessWidget {
               Icon(Icons.bolt, color: AppColors.phBlue),
               SizedBox(width: 8),
               Text(
-                "How to Use OptiVote PH",
+                "How to Use Optivote PH",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
