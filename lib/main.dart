@@ -189,25 +189,35 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: AppColors.navy,
-        title: RichText(
-          text: const TextSpan(
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/OVPH-transparent.png',
+              height: 32,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),
-            children: [
-              TextSpan(text: 'Opti'),
-              TextSpan(
-                text: 'Vote ',
+            const SizedBox(width: 8),
+            RichText(
+              text: const TextSpan(
                 style: TextStyle(
-                  color: AppColors.phGold,
-                  fontStyle: FontStyle.italic,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
+                children: [
+                  TextSpan(text: 'Opti'),
+                  TextSpan(
+                    text: 'Vote ',
+                    style: TextStyle(
+                      color: AppColors.phGold,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  TextSpan(text: 'PH'),
+                ],
               ),
-              TextSpan(text: 'PH'),
-            ],
-          ),
+            ),
+          ],
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3.0),
@@ -891,6 +901,13 @@ class HowItWorksScreen extends StatelessWidget {
           Center(
             child: Column(
               children: [
+                Image.asset(
+                  'assets/OVPH-transparent.png',
+                  height: 100,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 16),
                 const Text(
                   "About the Project",
                   textAlign: TextAlign.center,
