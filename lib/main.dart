@@ -1191,7 +1191,7 @@ class HowItWorksScreen extends StatelessWidget {
 
           _buildAboutCard(
             "The Process & Algorithm",
-            "How does Optivote PH turn raw data into an optimized slate? There are four primary steps in calculating the best combination of senators based on their records and your chosen priorities.",
+            "How does Optivote PH turn raw data into an optimized slate? There are five primary steps in calculating the best combination of senators based on their records and your chosen priorities.",
             extra: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1202,15 +1202,19 @@ class HowItWorksScreen extends StatelessWidget {
                 ),
                 _buildAlgorithmStep(
                   "2",
-                  "Using those filtered metrics, it applies the Branch and Bound Approach to the 0/1 Knapsack Problem. It finds the best possible group of twelve that stays under the inefficiency limit.",
+                  "Using those filtered metrics, it applies the Branch and Bound Approach to the 0/1 Knapsack Problem. It finds the best possible group of twelve that stays under the inefficiency limit of 9.0.",
                 ),
                 _buildAlgorithmStep(
                   "3",
-                  "Once the most optimal 12-person slate is found, the tool applies Shaker Sort to rank the winners from highest to lowest legislative value in your chosen category.",
+                  "If the strict weight cap prevents a full 12-person slate, the optimizer automatically runs a second unconstrained pass to identify the best remaining candidates needed to complete the 12 slots. These \"recommended\" picks are highlighted with a gold border to distinguish them from the purely optimal picks.",
                 ),
                 _buildAlgorithmStep(
                   "4",
-                  "The tool presents your ranked Top 12 list, providing a verifiable, merit-based cheat sheet for your ballot.",
+                  "Once the slate is assembled, the tool applies Shaker Sort to rank the winners from highest to lowest legislative value in your chosen category.",
+                ),
+                _buildAlgorithmStep(
+                  "5",
+                  "The tool presents your ranked Top 12 list as a verifiable, merit-based cheat sheet. Tap the list icon in the top-right to open the Slate Viewer for a clean, scrollable summary of your chosen senators.",
                 ),
               ],
             ),
@@ -1218,7 +1222,7 @@ class HowItWorksScreen extends StatelessWidget {
 
           _buildAboutCard(
             "Scope & Limitations",
-            "Optivote PH focuses on creating an optimized Top 12 senatorial list by looking strictly at how effective candidates are at passing laws. Each candidate is assigned a value based on their legislative efficiency ratio. By treating the twelve available ballot slots like a backpack with a limited capacity (the Knapsack Problem), the tool mathematically picks the group of senators that offers the highest combined success rate.\n\nHowever, there are a few limitations to keep in mind. First, the tool only works for incumbent or returning senators as it requires historical data from the official Senate database. New candidates will not have a record. Second, it is strictly data-driven and ignores subjective factors like social media popularity, public approval ratings, or a candidate's celebrity status. Finally, the system focuses on legislative output and bill success rates rather than the quality or political ideology of the laws themselves.",
+            "Optivote PH focuses on creating an optimized Top 12 senatorial list by looking strictly at how effective candidates are at passing laws. Each candidate is assigned a value based on their legislative efficiency ratio. By treating the twelve available ballot slots like a backpack with a limited capacity (the Knapsack Problem), the tool mathematically picks the group of senators that offers the highest combined success rate.\n\nWhen the strict 9.0 inefficiency weight cap prevents a fully optimal 12-person slate, the tool automatically completes the list using a secondary unconstrained optimization pass. Candidates added this way are clearly marked with a gold border, signaling they are strong recommendations who fall just outside the hard constraint — giving voters a complete, usable ballot every time.\n\nHowever, there are a few limitations to keep in mind. First, the tool only works for incumbent or returning senators as it requires historical data from the official Senate database. New candidates will not have a record. Second, it is strictly data-driven and ignores subjective factors like social media popularity, public approval ratings, or a candidate's celebrity status. Finally, the system focuses on legislative output and bill success rates rather than the quality or political ideology of the laws themselves.",
           ),
 
           _buildAboutCard(
@@ -1310,6 +1314,10 @@ class HowItWorksScreen extends StatelessWidget {
           _buildAlgorithmStep(
             "4",
             "Tap Run Optimizer to calculate your perfect 12-person slate.",
+          ),
+          _buildAlgorithmStep(
+            "5",
+            "Tap the list icon (⊟) in the top-right to open the Slate Viewer — a scrollable summary of your selected 12 senators ranked by productivity.",
           ),
         ],
       ),
