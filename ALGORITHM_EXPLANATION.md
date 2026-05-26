@@ -69,7 +69,7 @@ This mechanism ensures that the optimization engine focuses exclusively on the l
 
 ## 3. The Optimization Core (0/1 Knapsack Optimizer)
 
-The core function of Optivote-PH is to recommend a ballot of **up to 12 senators** that maximizes the total legislative value under an inefficiency threshold.
+The core function of Optivote-PH is to recommend a ballot of **exactly 12 senators** that maximizes total legislative value. It does this in two passes when necessary.
 
 ### Mathematical Formulation
 This is modeled as a variant of the **0/1 Knapsack Problem** with an additional **Cardinality (Count) Constraint**:
@@ -79,9 +79,9 @@ Let $N$ be the number of eligible candidates, $v_i$ be the dynamic value of cand
 $$\text{Maximizes } \sum_{i=1}^{N} x_i v_i$$
 
 Subject to the constraints:
-1. **Inefficiency Capacity Constraint**: 
+1. **Inefficiency Capacity Constraint** (Pass 1 only): 
    $$\sum_{i=1}^{N} x_i w_i \le 9.0$$
-   *(The cumulative inefficiency weight of the slate must not exceed 9.0)*
+   *(The cumulative inefficiency weight of the constrained slate must not exceed 9.0)*
    
 2. **Ballot Size (Cardinality) Constraint**:
    $$\sum_{i=1}^{N} x_i \le 12$$
@@ -206,12 +206,41 @@ static void _shakerSort(List<Senator> arr) {
 
 ---
 
-## 4. Mobile Integration & Backend UI Flow
+## 4. Slate Completion: Secondary Optimization Pass
+
+Because the strict 9.0 weight cap can mathematically prevent a full 12-person optimal slate (e.g., all remaining eligible candidates are too inefficient to fit), Optivote-PH performs a **secondary unconstrained optimization pass** whenever Pass 1 yields fewer than 12 senators.
+
+### How It Works
+
+1. **Pass 1 (Constrained)**: The optimizer runs with `cap = 9.0` and `maxCount = 12`. If it returns a full 12-senator slate, the process is complete.
+2. **Pass 2 (Unconstrained)**: If Pass 1 returns fewer than 12 senators, the optimizer is re-run on the same eligible pool with an effectively unconstrained capacity (`cap = 999.0`). This guarantees a full 12-person slate by the best available value.
+3. **Weight Simulation**: The final 12-slate is iterated in productivity order. A running weight accumulator tracks which senators fit inside the 9.0 cap. Senators whose inclusion would exceed the cap are flagged as **recommended** picks.
+
+```dart
+double runningWeight = 0.0;
+for (int i = 0; i < winners.length; i++) {
+  final senator = winners[i];
+  if (runningWeight + senator.w <= 9.0) {
+    runningWeight += senator.w;
+    _selectedIndices.add(i);          // fits under cap — optimal pick
+  } else {
+    _selectedIndices.add(i);
+    _yellowIndices.add(i);            // exceeds cap — recommended pick
+  }
+}
+```
+
+### Visual Indicator
+Recommended candidates (those that exceed the cap) are rendered with a **gold border** on their senator card and are listed in the Slate Viewer with a gold dot. This clearly distinguishes them from the purely optimal selections without removing them from the ballot.
+
+---
+
+## 5. Mobile Integration & Backend UI Flow
 
 To keep the application highly responsive and user-friendly, the backend integrates several UX design patterns:
 
 ### Multithreading with Isolates
-Running recursive Branch & Bound on the main thread could freeze the UI (causing frame drops). In Flutter, we spawn the optimizer inside a background thread (an **Isolate**) using the `compute()` function in [main.dart](file:///c:/Users/lenovo/StudioProjects/optivote_ph_mobile_prototype/lib/main.dart):
+Running recursive Branch & Bound on the main thread could freeze the UI (causing frame drops). In Flutter, the primary optimizer is spawned in a background thread (an **Isolate**) using the `compute()` function in [main.dart](file:///c:/Users/lenovo/StudioProjects/optivote_ph_mobile_prototype/lib/main.dart):
 
 ```dart
 final result = await compute(
@@ -224,6 +253,8 @@ final result = await compute(
 );
 ```
 
+> **Note**: The secondary unconstrained pass (Pass 2) runs synchronously inside `setState()` since it operates on an already-reduced candidate pool and completes near-instantaneously.
+
 ### Manual Controls & Exclusion List
 * **Exclusion**: Users can long-press any card to choose "Exclude from Optimizer". Excluded candidates are added to an exclusion set. When the optimizer is run, excluded senators are removed from the `eligible` list:
   ```dart
@@ -235,3 +266,12 @@ final result = await compute(
       .toList();
   ```
 * **Ballot Limits**: The UI prevents selecting more than 12 candidates manually, or selecting combinations that exceed the weight cap of $9.0$, giving users real-time feedback through snackbars and progress indicators.
+
+### Slate Viewer
+A **Slate Viewer** bottom sheet is accessible via the list icon (⊟) in the top-right corner of the AppBar when on the Optimizer tab. It presents:
+- All selected senators in ranked order (1–12)
+- Each entry shows: rank badge, senator name, $V$ and $W$ values
+- A **gold dot** beside entries that are recommended (cap-exceeding) picks
+- A **"Recommended" pill badge** in the header when the slate contains any gold-border entries
+
+The sheet is implemented as a `DraggableScrollableSheet` (resizable from 35% to 92% of screen height) for comfortable reading on all device sizes.

@@ -17,8 +17,13 @@ graph TD
     F --> H[Update Senator Card UI dynamically]
     G --> H
     H --> I[User taps Run Optimizer]
-    I --> J[B&B Algorithm utilizes updated V values]
-    J --> K[Optimal Slate selected based on custom sector focus]
+    I --> J[Pass 1: B&B with cap=9.0 and maxCount=12]
+    J --> K{Slate has 12 senators?}
+    K -- Yes --> M[Apply Shaker Sort by V descending]
+    K -- No --> L[Pass 2: B&B unconstrained cap=999.0]
+    L --> N[Simulate running weight to flag recommended picks]
+    N --> M
+    M --> O[Display slate: optimal picks in blue, recommended picks in gold border]
 ```
 
 ---
@@ -104,3 +109,25 @@ When multiple sectors are selected, the Senator's value ($V$) increases, which d
    sorted.sort((a, b) => (b.v / b.w).compareTo(a.v / a.w));
    ```
    This ensures that candidates who align strongly with the user's multiple priorities are evaluated first, setting a higher bound and ensuring they are more likely to make it into the final recommended slate.
+
+---
+
+## 6. Sector Selection & the Two-Pass Slate Completion
+
+Sector selection can also influence **which candidates are marked as recommended** (gold border) in the two-pass slate completion introduced in v1.1.0.
+
+### Why This Happens
+The dynamic $V$ value shifts the **Value-to-Weight ratio** ($\frac{V}{W}$) of each senator. When a user chooses a highly specific sector (e.g., only **Agriculture**), many senators with strong overall records but weak agricultural output will see their $V$ drop significantly. This can push more candidates below the 9.0 weight cap feasibility threshold, making it more likely that Pass 2 (unconstrained) is needed to complete the 12-person slate.
+
+### Practical Effect
+
+| Scenario | Effect on Slate Completion |
+|---|---|
+| **No sectors selected** | Full dataset $V$ values. Unlikely to need Pass 2. |
+| **1–2 broad sectors selected** | Moderate $V$ redistribution. Pass 2 may occasionally activate. |
+| **Narrow or single niche sector** | Many senators score near $V = 0$. Pass 2 more likely to activate to complete slate. |
+
+### What the User Sees
+Optimal senators (whose cumulative $W$ fits within 9.0) are shown with a **blue border**. Candidates that complete the 12-slate but would exceed the cap are shown with a **gold border**, clearly marking them as the best available picks given the constraint.
+
+The **Slate Viewer** (accessible via the list icon ⊟ in the top-right AppBar) shows the full ranked list, with gold dots marking recommended picks and a "Recommended" pill badge in the header when any such candidates are present.
