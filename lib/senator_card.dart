@@ -6,6 +6,7 @@ class SenatorCard extends StatelessWidget {
   final Senator senator;
   final bool isSelected;
   final bool isExcluded;
+  final bool isYellow;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -14,6 +15,7 @@ class SenatorCard extends StatelessWidget {
     required this.senator,
     required this.isSelected,
     this.isExcluded = false,
+    this.isYellow = false,
     required this.onTap,
     required this.onLongPress,
   });
@@ -32,12 +34,22 @@ class SenatorCard extends StatelessWidget {
           border: Border.all(
             color: isExcluded
                 ? AppColors.phRed
+                : isYellow
+                ? AppColors.phGold
                 : isSelected
-                    ? AppColors.phBlue
-                    : AppColors.border,
-            width: (isSelected || isExcluded) ? 2.0 : 1.0,
+                ? AppColors.phBlue
+                : AppColors.border,
+            width: (isSelected || isExcluded || isYellow) ? 2.0 : 1.0,
           ),
-          boxShadow: isSelected
+          boxShadow: isYellow
+              ? [
+                  BoxShadow(
+                    color: AppColors.phGold.withValues(alpha: 0.2),
+                    spreadRadius: 1,
+                    blurRadius: 6,
+                  ),
+                ]
+              : isSelected
               ? [
                   BoxShadow(
                     color: AppColors.phBlue.withValues(alpha: 0.12),
@@ -45,14 +57,14 @@ class SenatorCard extends StatelessWidget {
                   ),
                 ]
               : isExcluded
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: Opacity(
           opacity: isExcluded ? 0.6 : 1.0,
@@ -77,7 +89,8 @@ class SenatorCard extends StatelessWidget {
                                 : null,
                           ),
                         ),
-                        if (senator.party.isNotEmpty && senator.party != '—') ...[
+                        if (senator.party.isNotEmpty &&
+                            senator.party != '—') ...[
                           const SizedBox(height: 2),
                           Text(
                             senator.party,
@@ -98,24 +111,27 @@ class SenatorCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: isExcluded
                           ? AppColors.phRed
+                          : isYellow
+                          ? AppColors.phGold
                           : isSelected
-                              ? AppColors.phBlue
-                              : Colors.transparent,
+                          ? AppColors.phBlue
+                          : Colors.transparent,
                       border: Border.all(
                         color: isExcluded
                             ? AppColors.phRed
+                            : isYellow
+                            ? AppColors.phGold
                             : isSelected
-                                ? AppColors.phBlue
-                                : AppColors.borderStrong,
+                            ? AppColors.phBlue
+                            : AppColors.borderStrong,
                         width: 1.5,
                       ),
                     ),
                     child: isExcluded
                         ? const Icon(Icons.block, size: 12, color: Colors.white)
-                        : isSelected
-                            ? const Icon(Icons.check,
-                                size: 12, color: Colors.white)
-                            : null,
+                        : (isSelected || isYellow)
+                        ? const Icon(Icons.check, size: 12, color: Colors.white)
+                        : null,
                   ),
                 ],
               ),

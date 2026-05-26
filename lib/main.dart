@@ -26,6 +26,7 @@ class _MainScreenState extends State<MainScreen> {
   List<Senator>? _allSenators;
   final Set<String> _selectedSectors = {};
   bool _isLoading = true;
+  final GlobalKey<_OptimizerScreenState> _optimizerKey = GlobalKey<_OptimizerScreenState>();
 
   final List<Map<String, dynamic>> _sectorDefinitions = [
     {
@@ -174,6 +175,7 @@ class _MainScreenState extends State<MainScreen> {
               child: CircularProgressIndicator(color: AppColors.phBlue),
             )
           : OptimizerScreen(
+              key: _optimizerKey,
               senators: _allSenators ?? [],
               selectedSectors: _selectedSectors,
             ),
@@ -219,6 +221,16 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
+        actions: [
+          if (_currentIndex == 0)
+            IconButton(
+              tooltip: 'View Slate',
+              icon: const Icon(Icons.format_list_numbered, color: AppColors.phGold),
+              onPressed: () {
+                _optimizerKey.currentState?.showSlate(context);
+              },
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3.0),
           child: Container(color: AppColors.phGold, height: 3.0),
@@ -272,6 +284,7 @@ class OptimizerScreen extends StatefulWidget {
 class _OptimizerScreenState extends State<OptimizerScreen> {
   final Set<int> _selectedIndices = {};
   final Set<int> _excludedIndices = {};
+  final Set<int> _yellowIndices = {};
   List<Senator>? _localSenatorList;
 
   // Tracker for the background thread calculation
@@ -286,6 +299,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
         _localSenatorList = null;
         _selectedIndices.clear();
         _excludedIndices.clear();
+        _yellowIndices.clear();
       });
     }
   }
@@ -325,6 +339,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
           return;
         }
         _selectedIndices.add(index);
+        _yellowIndices.remove(index);
       }
     });
   }
@@ -335,6 +350,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
         _excludedIndices.remove(index);
       } else {
         _selectedIndices.remove(index); // Remove from selection if excluded
+        _yellowIndices.remove(index); // Remove from yellow recommendation if excluded
         _excludedIndices.add(index);
       }
     });
@@ -423,10 +439,184 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
     );
   }
 
+  void showSlate(BuildContext context) {
+    final selected = _selectedIndices.toList()..sort();
+    if (selected.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No senators selected yet.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.92,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  // Handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 4),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.how_to_vote, color: AppColors.phBlue, size: 22),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Your Slate  (${selected.length} / 12)',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_yellowIndices.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.phGold.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.phGold, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(width: 8, height: 8,
+                                  decoration: const BoxDecoration(color: AppColors.phGold, shape: BoxShape.circle)),
+                                const SizedBox(width: 4),
+                                const Text('Recommended', style: TextStyle(fontSize: 10, color: AppColors.navy, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 20, indent: 20, endIndent: 20),
+                  // List
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: selected.length,
+                      itemBuilder: (context, rank) {
+                        final idx = selected[rank];
+                        final senator = _senatorList[idx];
+                        final isYellow = _yellowIndices.contains(idx);
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isYellow ? AppColors.phGold : AppColors.phBlue,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isYellow ? AppColors.phGold : AppColors.phBlue).withValues(alpha: 0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Rank badge
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: isYellow
+                                      ? AppColors.phGold.withValues(alpha: 0.15)
+                                      : AppColors.phBlue.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${rank + 1}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isYellow ? AppColors.navy : AppColors.phBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      senator.name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'V = ${senator.v}  ·  W = ${senator.w}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isYellow)
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.phGold,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _resetSelection() {
     setState(() {
       _selectedIndices.clear();
       _excludedIndices.clear();
+      _yellowIndices.clear();
       _localSenatorList = null;
     });
   }
@@ -480,6 +670,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                       senator: senator,
                       isSelected: _selectedIndices.contains(index),
                       isExcluded: _excludedIndices.contains(index),
+                      isYellow: _yellowIndices.contains(index),
                       onTap: () => _toggleSelection(index, senator),
                       onLongPress: () => _showSenatorActions(index, senator),
                     );
@@ -503,6 +694,7 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                       senator: senator,
                       isSelected: _selectedIndices.contains(index),
                       isExcluded: _excludedIndices.contains(index),
+                      isYellow: _yellowIndices.contains(index),
                       onTap: () => _toggleSelection(index, senator),
                       onLongPress: () => _showSenatorActions(index, senator),
                     );
@@ -609,7 +801,39 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
 
                                 setState(() {
                                   _isOptimizing = false;
-                                  final winners = result.optimalSlate;
+                                  
+                                  List<Senator> winners = result.optimalSlate;
+                                  _yellowIndices.clear();
+
+                                  // If the constrained search yields fewer than 12 candidates,
+                                  // we run an unconstrained optimizer to get the best 12-senator slate
+                                  // and highlight the candidates that caused the 9.0 cap to be exceeded.
+                                  if (winners.length < 12) {
+                                    final unconstrainedResult = OptimizerEngine.runOptimizer(
+                                      eligible,
+                                      999.0, // Effectively unconstrained by weight
+                                      12,
+                                    );
+                                    winners = unconstrainedResult.optimalSlate;
+
+                                    _selectedIndices.clear();
+                                    double runningWeight = 0.0;
+                                    for (int i = 0; i < winners.length; i++) {
+                                      final senator = winners[i];
+                                      if (runningWeight + senator.w <= 9.0) {
+                                        runningWeight += senator.w;
+                                        _selectedIndices.add(i);
+                                      } else {
+                                        _selectedIndices.add(i);
+                                        _yellowIndices.add(i);
+                                      }
+                                    }
+                                  } else {
+                                    _selectedIndices.clear();
+                                    for (int i = 0; i < winners.length; i++) {
+                                      _selectedIndices.add(i);
+                                    }
+                                  }
 
                                   final excludedNames = _excludedIndices
                                       .map((i) => _senatorList[i].name)
@@ -621,24 +845,43 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                                       )
                                       .toList();
 
-                                  final remainingSenators = _senatorList
+                                  final remainingEligible = _senatorList
                                       .where(
                                         (s) =>
                                             !winners.contains(s) &&
-                                            !excludedNames.contains(s.name),
+                                            !excludedNames.contains(s.name) &&
+                                            s.authored > 0,
                                       )
                                       .toList();
+
+                                  final remainingIneligible = _senatorList
+                                      .where(
+                                        (s) =>
+                                            !winners.contains(s) &&
+                                            !excludedNames.contains(s.name) &&
+                                            s.authored == 0,
+                                      )
+                                      .toList();
+
+                                  // Sort remaining eligible by value/weight ratio descending, then dynamic value (v) descending as tie-breaker
+                                  remainingEligible.sort((a, b) {
+                                    final ratioA = a.v / (a.w == 0 ? 0.001 : a.w);
+                                    final ratioB = b.v / (b.w == 0 ? 0.001 : b.w);
+                                    int cmp = ratioB.compareTo(ratioA);
+                                    if (cmp != 0) return cmp;
+                                    return b.v.compareTo(a.v);
+                                  });
+
+                                  final remainingSenators = [
+                                    ...remainingEligible,
+                                    ...remainingIneligible,
+                                  ];
 
                                   _localSenatorList = [
                                     ...winners,
                                     ...remainingSenators,
                                     ...excludedSenators,
                                   ];
-
-                                  _selectedIndices.clear();
-                                  for (int i = 0; i < winners.length; i++) {
-                                    _selectedIndices.add(i);
-                                  }
 
                                   _excludedIndices.clear();
                                   int startIndexForExclusion =
@@ -652,17 +895,22 @@ class _OptimizerScreenState extends State<OptimizerScreen> {
                                       startIndexForExclusion + i,
                                     );
                                   }
-                                });
 
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Optimal Slate Found! Value: ${result.totalValue} | W: ${result.totalWeight.toStringAsFixed(2)}',
+                                  final numWinners = result.optimalSlate.length;
+                                  final numYellow = _yellowIndices.length;
+                                  String msg = 'Optimal Slate Found! Value: ${result.totalValue} | W: ${result.totalWeight.toStringAsFixed(2)}';
+                                  if (numWinners < 12 && numYellow > 0) {
+                                    msg += ' (Completed 12-slate with $numYellow recommended candidate${numYellow > 1 ? "s" : ""})';
+                                  }
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(msg),
+                                      backgroundColor: AppColors.success,
+                                      duration: const Duration(seconds: 4),
                                     ),
-                                    backgroundColor: AppColors.success,
-                                    duration: const Duration(seconds: 4),
-                                  ),
-                                );
+                                  );
+                                });
                               },
                         icon: _isOptimizing
                             ? const SizedBox(
@@ -1105,6 +1353,7 @@ class HowItWorksScreen extends StatelessWidget {
               height: 1.6,
             ),
           ),
+          // ignore: use_null_aware_elements
           if (extra != null) extra,
         ],
       ),
