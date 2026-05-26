@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.1.0 — 2026-05-26
+- Update the optimization to always result 12 candidates
+- Those exceed the 9.0 cap are highlighted in yellow
+- Added view slate button
+- Update about tab 
+
+## v1.0.0 — 2026-05-25
+- Added the icon and chnage the app label
+
 ## v0.1.4 — 2026-05-23 - 2026-05-24
 - Added profile page for each senator
 - Fixed overflow
